@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="RemoteMappingsManager">
+    <list>
+      <list>
+        <remote-mappings server-id="python@sftp://moritz_wilksch@35.209.167.207:22/home/moritz_wilksch/miniconda3/bin/python3.7">
+          <settings>
+            <list>
+              <mapping local-root="$PROJECT_DIR$" remote-root="/home/moritz_wilksch/SMBA" />
+            </list>
+          </settings>
+        </remote-mappings>
+        <remote-mappings server-id="python@sftp://moritz_wilksch@35.206.124.187:22/home/moritz_wilksch/miniconda3/bin/python3" />
+      </list>
+    </list>
+  </component>
+</project>

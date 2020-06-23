@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="142382f8-fbe9-47e1-8abf-6f62b897a216" name="gcloud">
+        <fileTransfer rootFolder="/home/moritz_wilksch/SMBA" accessType="SFTP" host="35.209.167.207" port="22" sshConfigId="cb6c8f21-696d-4616-a192-1cfa6f9e5c87" sshConfig="moritz_wilksch@35.209.167.207:22 key" keyPair="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
