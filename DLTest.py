@@ -52,10 +52,10 @@ vocab_size = len(tok.word_index)
 model = keras.Sequential([
     keras.layers.Embedding(input_dim=vocab_size+1, output_dim=20, input_length=280),
     # keras.layers.Flatten(),
-    keras.layers.AveragePooling1D(280),
+    keras.layers.AveragePooling1D(280, strides=1),
     keras.layers.Flatten(),
-    keras.layers.Dense(units=100, activation='relu'),
-    keras.layers.Dropout(0.2),
+    # keras.layers.Dense(units=100, activation='relu'),
+    # keras.layers.Dropout(0.2),
     keras.layers.Dense(units=20, activation='relu'),
     keras.layers.Dense(units=1, activation='sigmoid')
 ])
@@ -63,14 +63,8 @@ model = keras.Sequential([
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 model.summary()
 #%%
-model.fit(X_train, y_train, epochs=10, batch_size=4096, validation_data=(X_test, y_test))
+model.fit(X_train, y_train, epochs=5, batch_size=4096, validation_data=(X_test, y_test))
 pd.DataFrame({'test': model.history.history['val_accuracy'], 'train': model.history.history['accuracy']}).plot()
 plot()
 
-#%%
-from xgboost import XGBClassifier
 
-type(y_test)
-
-clf = XGBClassifier()
-clf.fit(X_train, y_train)

@@ -28,6 +28,7 @@ from nltk.corpus import sentiwordnet as swn
 from nltk import sent_tokenize, word_tokenize, pos_tag
 from nltk.stem import PorterStemmer
 import string
+import time
 
 # init stemmer and stopwords
 ps = PorterStemmer()
@@ -217,103 +218,14 @@ def stem_and_drop_sw(tweet):
     return " ".join(ps.stem(word) for word in word_tokenize(tweet) if word not in en_sw)
 
 #%%
-
-with mp.Pool(mp.cpu_count()) as p:
-    result = pd.Series(p.map(stem_and_drop_sw, df.tweet))
-df['tweet'] = pd.Series(result)
-
-# %%
-
-
-lemmatizer = WordNetLemmatizer()
-
-
-def penn_to_wn(tag):
-    """
-    Convert between the PennTreebank tags to simple Wordnet tags
-    """
-    if tag.startswith('J'):
-        return wn.ADJ
-    elif tag.startswith('N'):
-        return wn.NOUN
-    elif tag.startswith('R'):
-        return wn.ADV
-    elif tag.startswith('V'):
-        return wn.VERB
-    return None
-
-
-def clean_text(text):
-    text = text.replace("<br />", " ")
-    # text = text.decode("utf-8")
-
-    return text
-
-
-def swn_polarity(text):
-    """
-    Return a sentiment polarity: 0 = negative, 1 = positive
-    """
-    try:
-        sentiment = 0.0
-        tokens_count = 0
-
-        text = clean_text(text)
-
-        raw_sentences = sent_tokenize(text)
-        for raw_sentence in raw_sentences:
-            tagged_sentence = pos_tag(word_tokenize(raw_sentence))
-
-            for word, tag in tagged_sentence:
-                wn_tag = penn_to_wn(tag)
-                if wn_tag not in (wn.NOUN, wn.ADJ, wn.ADV):
-                    continue
-
-                lemma = lemmatizer.lemmatize(word, pos=wn_tag)
-                if not lemma:
-                    continue
-
-                synsets = wn.synsets(lemma, pos=wn_tag)
-                if not synsets:
-                    continue
-
-                # Take the first sense, the most common
-                synset = synsets[0]
-                swn_synset = swn.senti_synset(synset.name())
-
-                sentiment += swn_synset.pos_score() - swn_synset.neg_score()
-                tokens_count += 1
-
-        # judgment call ? Default to positive or negative
-        if not tokens_count:
-            return 0
-
-        """# sum greater than 0 => positive sentiment
-        if sentiment >= 0:
-            return 1"""
-        return sentiment
-        # negative sentiment
-        # return 0
-    except:
-        return pd.NA
-
-
-# %%
-print(df.tweet.head(10))
-df.tweet.head(10).apply(swn_polarity)
+starttime = time.time()
+tmp = df.head(50_000)['tweet'].apply(stem_and_drop_sw)
+endtime = time.time()
+print(endtime - starttime)
 
 #%%
-df.head(1000)['tweet'].apply(swn_polarity)
-
-# %%
-import multiprocessing as mp
-
+starttime = time.time()
 with mp.Pool(mp.cpu_count()) as p:
-    result = p.map(swn_polarity, df['tweet'])
-
-#%%
-sentis = pd.Series(result)
-
-# %%
-out = pd.DataFrame({'datetime': df.datetime, 'tweet': df.tweet, 'sentiment': sentis})
-out.to_pickle('data/sentiwords_out.pickle')
+    out = p.map(stem_and_drop_sw, df.head(50_000)['tweet'])
+endtime = time.time()
+print(endtime - starttime)

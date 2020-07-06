@@ -25,15 +25,6 @@ def drop_cols(df: pd.DataFrame, col_list: List[str]) -> pd.DataFrame:
 def fix_dtypes(df: pd.DataFrame) -> pd.DataFrame:
     """Fixes datatypes"""
     try:
-<<<<<<< HEAD
-=======
-        df['datetime'] = pd.to_datetime(df['date'] + ' ' + df['time'])
-        df = df.drop(['date', 'time'], axis=1)
-    except:
-        print("Could not create datetime.")
-        return df
-    try:
->>>>>>> 69b43f6... Added preprocessing pipeline
         string_cols = ['username', 'name', 'tweet', 'link']
         df[string_cols] = df[string_cols].astype('string')
     except:
@@ -42,14 +33,11 @@ def fix_dtypes(df: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
-<<<<<<< HEAD
 def drop_many_cashtags(df: pd.DataFrame) -> pd.DataFrame:
     df['num_cashtags'] = df.cashtags.apply(lambda s: len(s[1:-1].split(',')))
     # Drop tweets with more than 5 CTs
     mask = df['num_cashtags'] < 5
     return df[mask]
-=======
->>>>>>> 69b43f6... Added preprocessing pipeline
 
 # %%
 cols_to_drop = ['place', 'near', 'geo', 'source', 'user_rt_id', 'user_rt', 'retweet_id', 'retweet_date', 'translate',
@@ -58,26 +46,14 @@ cols_to_drop = ['place', 'near', 'geo', 'source', 'user_rt_id', 'user_rt', 'retw
 pipe = Pipeline([
     ('Init Pipeline', FunctionTransformer(init_pipeline)),
     ('drop cols', FunctionTransformer(drop_cols, kw_args={'col_list': cols_to_drop})),
-<<<<<<< HEAD
     ('fix dtypes', FunctionTransformer(fix_dtypes)),
     ('drop many CTs', FunctionTransformer(drop_many_cashtags))
-=======
-    ('fix dtypes', FunctionTransformer(fix_dtypes))
->>>>>>> 69b43f6... Added preprocessing pipeline
 
 ])
 
 # %%
-<<<<<<< HEAD
 raw = pd.read_pickle('data/all2019.pickle')
 df: pd.DataFrame = pipe.fit_transform(raw)
 
 #%%
 df.to_pickle('data/preprocessed_all2019.pickle')
-=======
-raw = pd.read_pickle('data/jan_til_jun2019.pickle')
-df: pd.DataFrame = pipe.fit_transform(raw)
-
-#%%
-df.info()
->>>>>>> 69b43f6... Added preprocessing pipeline
