@@ -25,11 +25,11 @@ pd.date_range(start='2019-01-01', end='2019-12-31').difference(df.datetime.dt.da
 import yfinance as yf
 
 raw_prices = yf.Ticker('TSLA').history(start='2019-01-01', end='2019-12-31', interval='1D')['Close']
-daily_return = raw_prices.pct_change().shift(-1)
 
 # %%
 # Backfill
-daily_return = daily_return.asfreq('D', method='bfill').fillna(0)
+daily_return = raw_prices.pct_change().shift(-1)
+daily_return = daily_return.asfreq('D', method='ffill').fillna(0)
 
 # %%
 daily_df = df.groupby(df.datetime.dt.date).agg(['mean', 'std']).fillna(0)
@@ -43,7 +43,7 @@ from sklearn.model_selection import GridSearchCV
 print("=== CORRELATION - SENTIMENT ONLY ===")
 for lag in range(6):
     daily_return = raw_prices.pct_change().shift(-lag)
-    daily_return = daily_return.asfreq('D', method='bfill').fillna(0)
+    daily_return = daily_return.asfreq('D', method='ffill').fillna(0)
     print(f"==== LAG = {lag} ====")
     print(stats.pearsonr(daily_df.loc[1:363, 'mean'], daily_return))
     # print(stats.spearmanr(daily_df.loc[1:363, 'sentiment']['mean'], daily_return))
@@ -51,15 +51,15 @@ for lag in range(6):
 print("=== CORRELATION - POLARITY ONLY ===")
 for lag in range(6):
     daily_return = raw_prices.pct_change().shift(-lag)
-    daily_return = daily_return.asfreq('D', method='bfill').fillna(0)
+    daily_return = daily_return.asfreq('D', method='ffill').fillna(0)
     print(f"==== LAG = {lag} ====")
     print(stats.pearsonr(daily_df.loc[1:363, 'std'], daily_return))
     # print(stats.spearmanr(daily_df.loc[1:363, 'sentiment']['std'], daily_return))
 
 #%%
-daily_df.head()
-
-
+# RESETTING lag to 1
+daily_return = raw_prices.pct_change().shift(-1)
+daily_return = daily_return.asfreq('D', method='ffill').fillna(0)
 
 # %%
 # Splitting the data
@@ -110,9 +110,9 @@ print("--- SENTIMENT ONLY ---")
 nb = GaussianNB()
 # nb.fit(x_train['mean'].values.reshape(-1, 1), (y_train > 0).astype('int8'))
 print(">> CV RESULTS <<")
-print(f"AUC = {np.mean(cross_val_score(nb, X, y_binary, cv=10, n_jobs=-1, scoring='roc_auc'))}")
-nb.fit(X, y_binary)
-print(f"Confusion Matrix \n {confusion_matrix(y_binary, nb.predict(X))}")
+print(f"AUC = {np.mean(cross_val_score(nb, X['mean'].values.reshape(-1, 1), y_binary, cv=10, n_jobs=-1, scoring='roc_auc'))}")
+nb.fit(X['mean'].values.reshape(-1, 1), y_binary)
+print(f"Confusion Matrix \n {confusion_matrix(y_binary, nb.predict(X['mean'].values.reshape(-1, 1)))}")
 
 
 # SENTIMENT & POLARITY
