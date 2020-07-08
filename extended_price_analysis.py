@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-use_vader = True
+use_vader = False
 
 if use_vader:
     print("====> Using VADER Data")
@@ -48,10 +48,10 @@ from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 X = daily_df.loc[1:363, ['mean', 'std']]
 
 # Preprocessing
-polynomial_features = True
-standard_scale = True
-add_volume = True
-add_previous_days = True
+polynomial_features = False
+standard_scale = False
+add_volume = False
+add_previous_days = False
 
 # Best until now:
 # AFINN + F/T/T/F => SVC 0.583
@@ -167,3 +167,5 @@ print(f"p-value = {sum(np.array(roc_aucs) >= 0.58336) / 1000}")
 # reset y_binary
 y_binary = (daily_return > 0).astype('int8')
 # %%
+
+
