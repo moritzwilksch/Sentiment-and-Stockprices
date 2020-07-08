@@ -11,6 +11,11 @@ def plot():
 #%%
 df = pd.read_pickle('data/preprocessed_all2019.pickle').reset_index(drop=True)
 
+clean = True
+if clean:
+    # remove links
+    df['tweet'] = df.tweet.str.replace('http\S+|www.\S+', '')
+    df['tweet'] = df.tweet.str.replace('@\w+', '')
 
 #%%
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
@@ -29,7 +34,10 @@ df['sentiment'] = pd.Series(result)
 
 #%%
 out = pd.DataFrame({'datetime': df.date.astype('datetime64'), 'tweet': df.tweet, 'sentiment': df.sentiment})
-out.to_pickle('data/vader_out.pickle')
+if not clean:
+    out.to_pickle('data/vader_out.pickle')
+elif clean:
+    out.to_pickle('data/vader_out_clean.pickle')
 
 #%%
 daily = df.groupby(df.datetime.dt.date)['sentiment'].agg(['mean', 'std'])

@@ -1,15 +1,14 @@
 # %%
-import pandas as pd
-import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
-import multiprocessing as mp
+import pandas as pd
 
-use_vader = False
+use_vader = True
 
 if use_vader:
     print("====> Using VADER Data")
-    df = pd.read_pickle('data/vader_out.pickle')
+    # df = pd.read_pickle('data/vader_out.pickle')
+    df = pd.read_pickle('data/vader_out_clean.pickle')
     df['datetime'] = df.datetime.astype('datetime64')
 
 else:
@@ -48,18 +47,18 @@ from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 # Splitting the data
 X = daily_df.loc[1:363, ['mean', 'std']]
 
-polynomial_features = False  # Dont use poly features
+# Preprocessing
+polynomial_features = True
 standard_scale = True
 add_volume = True
-add_previous_days = False  # False delivers GREAT SVC for AFINN
+add_previous_days = True
 
 # Best until now:
 # AFINN + F/T/T/F => SVC 0.583
-# Vader + T/T/T/F => SVC 0.578
+# Vader + T/T/T/T => SVC 0.592
 
 if add_volume:
     X['volume'] = raw_yahoo['Volume'].asfreq('D', method='ffill').fillna(0).values
-
 
 if add_previous_days:
     X['prev_1'] = raw_prices.pct_change().shift(1).asfreq('D', method='ffill').reset_index(drop=True).fillna(0)
@@ -68,11 +67,13 @@ if add_previous_days:
     X['prev_2'] = raw_prices.pct_change().shift(2).asfreq('D', method='ffill').reset_index(drop=True).fillna(0)
     X['prev_2'] = X['prev_2'].fillna(0)
 
+    X['prev_3'] = raw_prices.pct_change().shift(3).asfreq('D', method='ffill').reset_index(drop=True).fillna(0)
+    X['prev_3'] = X['prev_3'].fillna(0)
+
 if polynomial_features:
     # Polynomial Features
     poly = PolynomialFeatures(2)
     X = poly.fit_transform(X)
-
 
 if standard_scale:
     ss = StandardScaler()
@@ -84,6 +85,10 @@ y_binary = (daily_return > 0).astype('int8')
 # %%
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import cross_val_score
+from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import GridSearchCV
+
+
 
 # SENTIMENT & POLARITY
 print("=== LINEAR REGRESSION ===")
@@ -95,8 +100,23 @@ print(f" R^2 = {np.mean(cross_val_score(lr2, X, y, n_jobs=-1, cv=10, scoring='r2
 print(f" RMSE = {-np.mean(cross_val_score(lr2, X, y, n_jobs=-1, cv=10, scoring='neg_root_mean_squared_error'))}")
 
 # %%
+from sklearn.linear_model import LogisticRegression
+print("=== LOGISTIC REGRESSION ===")
+
+logr = LogisticRegression(max_iter=300)
+logr = GridSearchCV(logr,
+                    param_grid={'C': [0.01, 0.1, 0.5, 1, 5, 10, 100]},
+                    n_jobs=-1,
+                    cv=10,
+                    scoring='roc_auc'
+                    )
+
+logr.fit(X, y_binary)
+print(f"Best params: {logr.best_params_} yielding {logr.scoring} = {logr.best_score_}")
+print(f"Confusion Matrix \n {confusion_matrix(y_binary, logr.predict(X))}")
+
+# %%
 from sklearn.naive_bayes import GaussianNB
-from sklearn.metrics import confusion_matrix, roc_auc_score
 
 print("=== GAUSSIAN NAIVE BAYES ===")
 
@@ -109,7 +129,6 @@ nb2.fit(X, y_binary)
 print(f"Confusion Matrix \n {confusion_matrix(y_binary, nb2.predict(X))}")
 
 # %%
-from sklearn.model_selection import GridSearchCV
 from sklearn.svm import SVC
 
 # SENTIMENT & POLARITY
@@ -125,39 +144,12 @@ svc2 = GridSearchCV(SVC(probability=True),
                     cv=10,
                     scoring='roc_auc'
                     )
-"""from sklearn.preprocessing import MinMaxScaler
-mm = MinMaxScaler()
-sample_weight=mm.fit_transform(np.abs(y).values.reshape(-1,1)).flatten()
-"""
+
 svc2.fit(X, y_binary)
 print(f"Best params: {svc2.best_params_} yielding {svc2.scoring} = {svc2.best_score_}")
 print(f"Confusion Matrix \n {confusion_matrix(y_binary, svc2.predict(X))}")
 
 # %%
-from xgboost import XGBClassifier
-from sklearn.ensemble import RandomForestClassifier
-
-print("=== RANDOM FOREST Classifier ===")
-print("--- ALL ---")
-
-rf = GridSearchCV(XGBClassifier(),
-                  param_grid={
-                      'max_depth': [2, 3, 4],
-                      'gamma': [0, 0.01, 0.1, 1, 10],
-                      'lambda': [1, 5, 10],
-                      'alpha': [1, 5, 10]
-                  },
-                  n_jobs=-1,
-                  cv=5,
-                  scoring='roc_auc'
-                  )
-
-rf.fit(X, y_binary)
-print(f"Best params: {rf.best_params_} yielding {rf.scoring} = {rf.best_score_}")
-print(f"Confusion Matrix \n {confusion_matrix(y_binary, rf.predict(X))}")
-
-
-#%%
 
 # Testsing Significance of ROC AUC of SVC
 n_runs = 1000
@@ -174,5 +166,4 @@ print(f"p-value = {sum(np.array(roc_aucs) >= 0.58336) / 1000}")
 
 # reset y_binary
 y_binary = (daily_return > 0).astype('int8')
-#%%
-
+# %%
