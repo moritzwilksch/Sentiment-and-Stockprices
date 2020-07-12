@@ -103,8 +103,8 @@ results = {
     (True, True, False, False)
 ]"""
 
-"""# Financial indicators only - dont forget do add a .drop into prep
-results['combos'] = [(True, True, True, True),
+# Financial indicators only - dont forget do add a .drop into prep
+"""results['combos'] = [(True, True, True, True),
                      (True, True, True, False),
                      (True, True, False, True),
                      # (True, True, False, False), must not occur i.O. to drop sentiment
@@ -121,31 +121,36 @@ results['combos'] = [(True, True, True, True),
                      (False, False, False, True),
                      # (False, False, False, False) must not occur i.O. to drop sentiment
                      ]"""
+from sklearn.model_selection import TimeSeriesSplit, KFold
 
 for combo in results['combos']:
     X, y, y_binary = prep(*combo)
 
-    # lr2 = LinearRegression()
-    # results['lr_mae'].append(-np.mean(cross_val_score(lr2, X, y, n_jobs=-1, cv=10, scoring='neg_mean_absolute_error')))
+    tss = TimeSeriesSplit(n_splits=10)
+    # cv = [(train_idx, test_idx) for train_idx, test_idx in tss.split(X)]
+    cv = KFold(10)
+
+    lr2 = LinearRegression()
+    results['lr_mae'].append(-np.mean(cross_val_score(lr2, X, y, n_jobs=-1, cv=10, scoring='neg_mean_absolute_error')))
 
     nb2 = GaussianNB()
-    results['nb_roc'].append(np.mean(cross_val_score(nb2, X, y_binary, cv=10, n_jobs=-1, scoring='accuracy')))
+    results['nb_roc'].append(np.mean(cross_val_score(nb2, X, y_binary, cv=cv, n_jobs=-1, scoring='roc_auc')))
 
     svc2 = GridSearchCV(SVC(probability=True),
                         param_grid={'kernel': ['rbf', 'poly', 'sigmoid'],
                                     'C': [0.01, 0.1, 0.5, 1, 5, 10]
                                     },
                         n_jobs=-1,
-                        cv=10,
-                        scoring='accuracy'
+                        cv=cv,
+                        scoring='roc_auc'
                         )
     svc2.fit(X, y_binary)
     results['svc_roc'].append(svc2.best_score_)
 
-# print(f"Best Linear Regression combo = {results['combos'][np.argmin(results['lr_mae'])]} yielding MAE = {np.min(results['lr_mae'])}")
+print(f"Best Linear Regression combo = {results['combos'][np.argmin(results['lr_mae'])]} yielding MAE = {np.min(results['lr_mae'])}")
 
 print(
-    f"Best Naive Bayes combo = {results['combos'][np.argmax(results['nb_roc'])]} yielding ROC = {np.max(results['nb_roc'])}")
+    f"Best Naive Bayes combo = {results['combos'][np.argmax(results['nb_roc'])]} yielding Accuracy = {np.max(results['nb_roc'])}")
 
 print(
-    f"Best SVC combo = {results['combos'][np.argmax(results['svc_roc'])]} yielding ROC = {np.max(results['svc_roc'])}")
+    f"Best SVC combo = {results['combos'][np.argmax(results['svc_roc'])]} yielding Accuracy = {np.max(results['svc_roc'])}")

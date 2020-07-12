@@ -48,9 +48,9 @@ from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 X = daily_df.loc[1:363, ['mean', 'std']]
 
 # Preprocessing
-polynomial_features = False
+polynomial_features = True
 standard_scale = False
-add_volume = False
+add_volume = True
 add_previous_days = False
 
 # Best until now:
@@ -136,6 +136,7 @@ from sklearn.svm import SVC
 print("=== Support Vector Classifier ===")
 print("--- ALL ---")
 
+
 svc2 = GridSearchCV(SVC(probability=True),
                     param_grid={'kernel': ['rbf', 'poly', 'sigmoid'],
                                 'C': [0.01, 0.1, 0.5, 1, 5, 10]
@@ -148,6 +149,28 @@ svc2 = GridSearchCV(SVC(probability=True),
 svc2.fit(X, y_binary)
 print(f"Best params: {svc2.best_params_} yielding {svc2.scoring} = {svc2.best_score_}")
 print(f"Confusion Matrix \n {confusion_matrix(y_binary, svc2.predict(X))}")
+
+#%%
+
+from sklearn.metrics import roc_auc_score, accuracy_score
+from sklearn.model_selection import TimeSeriesSplit
+
+tss = TimeSeriesSplit(n_splits=10)
+test_scores = []
+cv = tss.split(X)
+
+
+"""for train_idx, test_idx in cv:
+    aux = SVC(C=0.5, kernel='sigmoid')
+    aux.fit(X[train_idx], y_binary[train_idx])
+    test_scores.append(accuracy_score(y_binary[test_idx], aux.predict(X[test_idx])))
+print(f"Mean = {np.mean(test_scores)}")"""
+
+np.mean(cross_val_score(SVC(C=0.5, kernel='sigmoid'), X, y_binary, cv=cv))
+
+
+
+
 
 # %%
 
