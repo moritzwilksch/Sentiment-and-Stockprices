@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import numpy as np
 
-use_vader = False
+use_vader = True
 
 if use_vader:
     print("====> Using VADER Data")
@@ -37,7 +37,7 @@ daily_return = raw_prices.pct_change().shift(-1)
 daily_return = daily_return.asfreq('D', method='ffill').fillna(0)
 
 daily_df = df.groupby(df.datetime.dt.date).agg(['mean', 'std']).fillna(0)
-daily_df = daily_df.reset_index()
+daily_df = daily_df['sentiment'].reset_index()
 daily_df.columns = ['date', 'mean', 'std']
 
 # %%
@@ -89,7 +89,7 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.svm import SVC
 
 results = {
-    'combos': [x for x in product([True, False], repeat=4)],
+    'combos': [x for x in product([True, False], repeat=2)],
     'lr_mae': [],
     'nb_roc': [],
     'svc_roc': []
@@ -124,17 +124,17 @@ results = {
 from sklearn.model_selection import TimeSeriesSplit, KFold
 
 for combo in results['combos']:
-    X, y, y_binary = prep(*combo)
+    X, y, y_binary = prep(*combo, True, True)  # Always add volume & previous days
 
-    tss = TimeSeriesSplit(n_splits=10)
-    # cv = [(train_idx, test_idx) for train_idx, test_idx in tss.split(X)]
     cv = KFold(10)
+    SCORING = 'accuracy'
+
 
     lr2 = LinearRegression()
-    results['lr_mae'].append(-np.mean(cross_val_score(lr2, X, y, n_jobs=-1, cv=10, scoring='neg_mean_absolute_error')))
+    results['lr_mae'].append(-np.mean(cross_val_score(lr2, X, y, n_jobs=-1, cv=cv, scoring='neg_mean_absolute_error')))
 
     nb2 = GaussianNB()
-    results['nb_roc'].append(np.mean(cross_val_score(nb2, X, y_binary, cv=cv, n_jobs=-1, scoring='roc_auc')))
+    results['nb_roc'].append(np.mean(cross_val_score(nb2, X, y_binary, cv=cv, n_jobs=-1, scoring=SCORING)))
 
     svc2 = GridSearchCV(SVC(probability=True),
                         param_grid={'kernel': ['rbf', 'poly', 'sigmoid'],
@@ -142,7 +142,7 @@ for combo in results['combos']:
                                     },
                         n_jobs=-1,
                         cv=cv,
-                        scoring='roc_auc'
+                        scoring=SCORING
                         )
     svc2.fit(X, y_binary)
     results['svc_roc'].append(svc2.best_score_)
@@ -150,7 +150,7 @@ for combo in results['combos']:
 print(f"Best Linear Regression combo = {results['combos'][np.argmin(results['lr_mae'])]} yielding MAE = {np.min(results['lr_mae'])}")
 
 print(
-    f"Best Naive Bayes combo = {results['combos'][np.argmax(results['nb_roc'])]} yielding Accuracy = {np.max(results['nb_roc'])}")
+    f"Best Naive Bayes combo = {results['combos'][np.argmax(results['nb_roc'])]} yielding {SCORING} = {np.max(results['nb_roc'])}")
 
 print(
-    f"Best SVC combo = {results['combos'][np.argmax(results['svc_roc'])]} yielding Accuracy = {np.max(results['svc_roc'])}")
+    f"Best SVC combo = {results['combos'][np.argmax(results['svc_roc'])]} yielding {SCORING} = {np.max(results['svc_roc'])}")

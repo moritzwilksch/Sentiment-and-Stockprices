@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-use_vader = False
+use_vader = True
 
 if use_vader:
     print("====> Using VADER Data")
@@ -38,7 +38,7 @@ daily_return = daily_return.asfreq('D', method='ffill').fillna(0)
 
 # %%
 daily_df = df.groupby(df.datetime.dt.date).agg(['mean', 'std']).fillna(0)
-daily_df = daily_df.reset_index()
+daily_df = daily_df['sentiment'].reset_index()
 daily_df.columns = ['date', 'mean', 'std']
 
 # %%
@@ -48,10 +48,10 @@ from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 X = daily_df.loc[1:363, ['mean', 'std']]
 
 # Preprocessing
-polynomial_features = True
+polynomial_features = False
 standard_scale = False
 add_volume = True
-add_previous_days = False
+add_previous_days = True
 
 # Best until now:
 # AFINN + F/T/T/F => SVC 0.583
@@ -61,13 +61,13 @@ if add_volume:
     X['volume'] = raw_yahoo['Volume'].asfreq('D', method='ffill').fillna(0).values
 
 if add_previous_days:
-    X['prev_1'] = raw_prices.pct_change().shift(1).asfreq('D', method='ffill').reset_index(drop=True).fillna(0)
+    X['prev_1'] = raw_prices.pct_change().shift(0).asfreq('D', method='ffill').reset_index(drop=True).fillna(0)
     X['prev_1'] = X['prev_1'].fillna(0)
 
-    X['prev_2'] = raw_prices.pct_change().shift(2).asfreq('D', method='ffill').reset_index(drop=True).fillna(0)
+    X['prev_2'] = raw_prices.pct_change().shift(1).asfreq('D', method='ffill').reset_index(drop=True).fillna(0)
     X['prev_2'] = X['prev_2'].fillna(0)
 
-    X['prev_3'] = raw_prices.pct_change().shift(3).asfreq('D', method='ffill').reset_index(drop=True).fillna(0)
+    X['prev_3'] = raw_prices.pct_change().shift(2).asfreq('D', method='ffill').reset_index(drop=True).fillna(0)
     X['prev_3'] = X['prev_3'].fillna(0)
 
 if polynomial_features:
@@ -86,9 +86,9 @@ y_binary = (daily_return > 0).astype('int8')
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import confusion_matrix
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, KFold
 
-
+cv = KFold(10)
 
 # SENTIMENT & POLARITY
 print("=== LINEAR REGRESSION ===")
@@ -96,8 +96,8 @@ print("--- ALL ---")
 lr2 = LinearRegression()
 
 print(">> CV RESULTS <<")
-print(f" R^2 = {np.mean(cross_val_score(lr2, X, y, n_jobs=-1, cv=10, scoring='r2'))}")
-print(f" RMSE = {-np.mean(cross_val_score(lr2, X, y, n_jobs=-1, cv=10, scoring='neg_root_mean_squared_error'))}")
+print(f" R^2 = {np.mean(cross_val_score(lr2, X, y, n_jobs=-1, cv=cv, scoring='r2'))}")
+print(f" MAP = {-np.mean(cross_val_score(lr2, X, y, n_jobs=-1, cv=cv, scoring='neg_mean_absolute_error'))}")
 
 # %%
 from sklearn.linear_model import LogisticRegression
